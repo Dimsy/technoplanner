@@ -10,118 +10,100 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
     const [currentValue, setCurrentValue] = useState(el.value);
     const [currentType, setCurrentType] = useState(el.type);
 
-    useEffect(()=> {
+    useEffect(() => {
         setPosition({x: el.x, y: el.y});
         setCurrentType(el.type);
         setWeight(el.weight);
-    },[el]);
+    }, [el]);
 
     const getColor = (type) => {
-      switch (type) {
-          case 'none':
-              return 'lightGrey';
-          case 'ППРБ':
-              return '#00B8D9';
-          case 'КМК':
-              return '#36B37E';
-          case 'Согласия':
-              return '#FFAB00';
-          default:
-              return 'lightGrey';
-      }
+        switch (type) {
+            case 'none':     return 'lightGrey';
+            case 'ППРБ':     return '#00B8D9';
+            case 'КМК':      return '#36B37E';
+            case 'Согласия': return '#FFAB00';
+            default:         return 'lightGrey';
+        }
     };
 
-    const checkNeighbours = (x, y) => {
-        // console.log('------------------------')
-        // console.log('El x', x);
-        // console.log('El y', y);
-        // console.log('El weight', weight);
-        let friendKey = '';
-
-        const foundFriends = Object.keys(data).filter((key) => {
-            // console.log('*******')
-            let curX = data[key].x;
-            let curY = data[key].y;
-            let curW = data[key].weight;
-            // console.log('curX', curX);
-            // console.log('curY', curY);
-            // console.log('curW', curW);
-            // console.log('x + weight >= curX',x + weight >= curX)
-            // console.log('x + weight <= curX + curW',x + weight <= curX + curW)
-            // console.log(' y === curY', y === curY)
-            if (x + weight >= curX && x + weight <= curX + curW && y === curY) {
-                //console.log('veryfriend')
-                friendKey = key;
-                return true;
-            } else {
-                //console.log('NOT friend')
-                return false
-            }
-        });
-        return {key: friendKey, data: data[foundFriends[0]]};
+    /**
+     * Находит все элементы на той же строке (y), которые пересекаются
+     * с диапазоном [newX .. newX + currentWeight], исключая сам перетаскиваемый элемент.
+     *
+     * Пересечение по X: два отрезка [a, a+wa] и [b, b+wb] пересекаются,
+     * если a < b+wb && a+wa > b.
+     */
+    const findCollisions = (newX, newY, currentWeight) => {
+        return Object.keys(data)
+            .filter((key) => {
+                if (key === value) return false; // пропускаем себя (по ключу)
+                const other = data[key];
+                if (other.y !== newY) return false; // другая строка
+                // AABB пересечение по оси X (строгое — касание не считается коллизией)
+                return newX < other.x + other.weight && newX + currentWeight > other.x;
+            })
+            .map((key) => ({ key, ...data[key] }));
     };
 
-    const snapPositionToRow = (x, y) => {
-        let newX = x;
-        let newY = y;
+    /**
+     * Снэппинг к сетке + разрешение коллизий.
+     * При наличии пересечения — ставим элемент ПОСЛЕ самого правого блокирующего элемента.
+     */
+    const snapPositionToRow = (rawX, rawY) => {
+        // Снэппинг к сетке 50px
+        let newX = rawX % 50 !== 0
+            ? Math.max(0, rawX - (rawX % 50))
+            : rawX;
 
-        if (x % 50 !== 0) {
-            newX = x - x % weight < 0 ? 0 : x - x % 50;
-        } else {
-            newX = x;
+        let newY = rawY % 50 !== 0
+            ? Math.max(50, rawY - (rawY % 50))
+            : rawY;
+
+        // Проверяем коллизии и сдвигаем элемент вправо за крайний блокирующий блок
+        const collisions = findCollisions(newX, newY, weight);
+
+        if (collisions.length > 0) {
+            // Находим правый край самого правого пересекающегося элемента
+            const rightmostEdge = Math.max(...collisions.map((c) => c.x + c.weight));
+            newX = rightmostEdge;
         }
 
-        if (y % 50 !== 0) {
-            newY = y - y % 50 < 0 ? 50 : y - y % 50;
-        } else {
-            newY = y;
-        }
-
-        const friend = checkNeighbours(newX, newY);
-        if (!!friend && !!friend.data) {
-            newX = friend.data.x - weight;
-        }
-        updater(value, {value: el.value, x: newX, y: newY, weight: weight, type: currentType});
-        setPosition({x: newX, y: newY})
+        updater(value, { value: el.value, x: newX, y: newY, weight, type: currentType });
+        setPosition({ x: newX, y: newY });
     };
 
-    const handleDragEnter = e => {
+    const handleDragEnter = (e) => {
         e.preventDefault();
         setSmthDragging(true);
         setIsDragging(true);
     };
 
-    const handleDrop = e => {
+    const handleDrop = (e) => {
         e.preventDefault();
         e.stopPropagation();
         if (e.button !== 2) {
-            setSmthDragging(false)
+            setSmthDragging(false);
             setIsDragging(false);
-            snapPositionToRow(x, y);
+            // Компенсируем то же смещение, что используется при визуальном отображении
+            snapPositionToRow(x - 10, y - 40);
         }
     };
 
-    const handleScroll = e => {
+    const handleScroll = (e) => {
         let newWeight = weight;
-        if (e.deltaY < 0)
-        {
-            const friend = checkNeighbours(position.x+50, position.y);
-            if (!!friend && !!friend.data && friend.data.x - 50 >= (position.x + weight)) {
-                newWeight = weight+50;
-            } else if (!friend || !friend.data) {
-                newWeight = weight+50;
+
+        if (e.deltaY < 0) {
+            // Расширяем вправо — проверяем, не заблокировано ли место
+            const collisions = findCollisions(position.x, position.y, weight + 50);
+            if (collisions.length === 0) {
+                newWeight = weight + 50;
             }
+        } else if (e.deltaY > 0) {
+            newWeight = Math.max(50, weight - 50);
         }
-        else if (e.deltaY > 0)
-        {
-            if (weight-50 <=0) {
-                newWeight = 50
-            } else {
-                newWeight = weight-50;
-            }
-        }
+
         setWeight(newWeight);
-        updater(value, {value: el.value, x: position.x, y: position.y, weight: newWeight, type: currentType});
+        updater(value, { value: el.value, x: position.x, y: position.y, weight: newWeight, type: currentType });
     };
 
     const componentStyle = {
@@ -129,15 +111,17 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         width: 20,
         position: 'absolute',
         left: 0,
-        bottom: 0
+        bottom: 0,
     };
+
     const positionStyle = {
         height: 50,
         width: weight,
         position: 'fixed',
         backgroundColor: getColor(currentType),
         boxShadow: 'inset 0px 0px 0px 2px #000',
-        opacity: position.y >= 50 ? 1: 0.5
+        opacity: position.y >= 50 ? 1 : 0.5,
+        zIndex: isDragging ? 1000 : 1,
     };
 
     if (isDragging) {
@@ -150,25 +134,24 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
 
     const toggleEdit = () => {
         setSmthEditing(!isEditing);
-        setIsEditing(!isEditing)
+        setIsEditing(!isEditing);
     };
 
-    const changeValue = (e) => {
-        setCurrentValue(e.target.value);
-    };
+    const changeValue = (e) => setCurrentValue(e.target.value);
 
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
-            updater(value, {value: currentValue, x: position.x, y: position.y, weight: weight, type: currentType});
+            updater(value, { value: currentValue, x: position.x, y: position.y, weight, type: currentType });
             toggleEdit();
         }
     };
 
     const setType = (e) => {
-        setCurrentType(e.target.value);
+        const newType = e.target.value;
+        setCurrentType(newType);
         setSmthEditing(!isEditing);
         setIsEditing(!isEditing);
-        updater(value, {value: currentValue, x: position.x, y: position.y, weight: weight, type: e.target.value});
+        updater(value, { value: currentValue, x: position.x, y: position.y, weight, type: newType });
     };
 
     const deleteElement = () => {
@@ -177,11 +160,13 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         }
     };
 
-    return  (
-        <div style={positionStyle}
-             className={'noselect'}
-             onWheel = {(e) => handleScroll(e)}
+    return (
+        <div
+            style={positionStyle}
+            className={'noselect'}
+            onWheel={(e) => handleScroll(e)}
         >
+            {/* Кнопка редактирования */}
             <div
                 onClick={toggleEdit}
                 style={{
@@ -190,18 +175,19 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
                     bottom: 0,
                     width: 20,
                     height: 20,
-                    zIndex: '999',
+                    zIndex: 999,
                     overflow: 'visible',
-                    background: getColor(currentType),
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     background: 'transparent',
-                    border: 'none'
+                    border: 'none',
                 }}
             >
                 ✎
             </div>
+
+            {/* Основная зона перетаскивания / контент */}
             <div
                 onMouseDown={e => !isEditing && handleDragEnter(e)}
                 onTouchStart={e => !isEditing && handleDragEnter(e)}
@@ -214,14 +200,21 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
                     paddingTop: '10px',
                     textAlign: 'center',
                     verticalAlign: 'middle',
-                    height:50
+                    height: 50,
                 }}
             >
-                { !isEditing && el.value }
-                { isEditing && (
+                {!isEditing && el.value}
+                {isEditing && (
                     <div>
-                        <input style={{width: '75%'}} type='text' value={currentValue} inputmode="search" onChange={changeValue} onKeyDown={handleKeyDown}/>
-                        <select style={{width: '18%'}} onChange={setType} value={currentType}>
+                        <input
+                            style={{ width: '75%' }}
+                            type="text"
+                            value={currentValue}
+                            inputMode="search"
+                            onChange={changeValue}
+                            onKeyDown={handleKeyDown}
+                        />
+                        <select style={{ width: '18%' }} onChange={setType} value={currentType}>
                             <option>КМК</option>
                             <option>ППРБ</option>
                             <option>Согласия</option>
@@ -229,26 +222,35 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
                     </div>
                 )}
             </div>
-            <div style={{
-                width:10,
-                height:10,
-                backgroundColor: 'red',
-                position: 'absolute',
-                top: 5,
-                right: 5,
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: 'transparent',
-            }} onClick={deleteElement}>⨉</div>
-            <div className={'noselect'}
-                 onMouseDown={e => handleDragEnter(e)}
-                 onTouchStart={e => handleDragEnter(e)}
-                 onMouseUp={e => handleDrop(e)}
-                 onTouchEnd={e => handleDrop(e)}
-                 onMouseUpCapture={e => handleDrop(e)}
-                 onTouchEndCapture={e => handleDrop(e)}
-                 style={componentStyle}
+
+            {/* Кнопка удаления */}
+            <div
+                style={{
+                    width: 10,
+                    height: 10,
+                    position: 'absolute',
+                    top: 5,
+                    right: 5,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    background: 'transparent',
+                }}
+                onClick={deleteElement}
+            >
+                ⨉
+            </div>
+
+            {/* Угловая зона перетаскивания */}
+            <div
+                className={'noselect'}
+                onMouseDown={e => handleDragEnter(e)}
+                onTouchStart={e => handleDragEnter(e)}
+                onMouseUp={e => handleDrop(e)}
+                onTouchEnd={e => handleDrop(e)}
+                onMouseUpCapture={e => handleDrop(e)}
+                onTouchEndCapture={e => handleDrop(e)}
+                style={componentStyle}
             >
                 ⤭
             </div>

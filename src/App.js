@@ -1,135 +1,149 @@
 import './App.css';
 import { v4 as uuidv4 } from 'uuid';
-import {TimeElement} from "./Components/TimeElement";
-import {CalendarBG} from "./Components/CalendarBG";
-import { useEffect, useState } from 'react';
+import { TimeElement } from "./Components/TimeElement";
+import { CalendarBG } from "./Components/CalendarBG";
+import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 
-function App() {
-    const [mousePos, setMousePos] = useState({});
-    const [isSmthDragging, setSmthDragging] = useState(false);
-    const [isSmthEditing, setSmthEditing] = useState(false);
-    const testData = {};
+const INITIAL_DATA = {};
 
-    const [data, updateData] = useState(testData);
+const ADD_BUTTON_STYLE = {
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    zIndex: 900,
+};
 
-    useEffect(()=>{
-        loadData();
-        setInterval(()=> {
-            if (!isSmthEditing && !isSmthDragging) {
-                loadData();
-            }
-        }, 3000);
-    },[]);
+const AUTO_REFRESH_INTERVAL = 3000;
+
+function usePointerPosition(isActive) {
+    const [pos, setPos] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
-        const handleMouseMove = (event) => {
-            if (isSmthDragging) {
-                setMousePos({x: event.clientX, y: event.clientY});
-            }
+        if (!isActive) return;
+
+        const handleMouseMove = (e) => {
+            setPos({ x: e.clientX, y: e.clientY });
+        };
+
+        const handleTouchMove = (e) => {
+            const touch = (e.originalEvent ?? e).touches[0]
+                ?? (e.originalEvent ?? e).changedTouches[0];
+            setPos({ x: touch.pageX, y: touch.pageY });
         };
 
         window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('touchmove', handleTouchMove);
 
         return () => {
-            window.removeEventListener(
-                'mousemove',
-                handleMouseMove
-            );
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [isSmthDragging]);
+    }, [isActive]);
+
+    return pos;
+}
+
+function App() {
+    const [isDragging, setIsDragging] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [data, setData] = useState(INITIAL_DATA);
+
+    const isDraggingRef = useRef(isDragging);
+    const isEditingRef = useRef(isEditing);
+
+    useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
+    useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
+
+    const mousePos = usePointerPosition(isDragging);
+
+    const loadData = useCallback(async () => {
+        try {
+            const res = await axios.get('http://localhost:9000/getSchedule');
+            setData(res.data);
+        } catch (err) {
+            console.error('Ошибка загрузки данных:', err);
+        }
+    }, []);
+
+    const saveData = useCallback(async (newData) => {
+        try {
+            await axios.post('http://localhost:9000/saveSchedule', newData);
+            console.log('Сохранено!');
+        } catch (err) {
+            console.error('Ошибка сохранения:', err);
+        }
+    }, []);
 
     useEffect(() => {
-        const handleMouseMove = (event) => {
-            var evt = (typeof event.originalEvent === 'undefined') ? event : event.originalEvent;
-            var touch = evt.touches[0] || evt.changedTouches[0];
-            let newX = touch.pageX;
-            let newY = touch.pageY;
+        loadData();
 
-            if (isSmthDragging) {
-                setMousePos({x: newX, y: newY });
+        const intervalId = setInterval(() => {
+            if (!isEditingRef.current && !isDraggingRef.current) {
+                loadData();
             }
-        };
+        }, AUTO_REFRESH_INTERVAL);
 
-        window.addEventListener('touchmove', handleMouseMove);
+        return () => clearInterval(intervalId);
+    }, [loadData]);
 
-        return () => {
-            window.removeEventListener(
-                'touchmove',
-                handleMouseMove
-            );
-        };
-    }, [isSmthDragging]);
+    const addElement = useCallback(() => {
+        setData((prev) => {
+            const newData = {
+                ...prev,
+                [uuidv4()]: {
+                    value: 'Новая активность',
+                    x: 100,
+                    y: 100,
+                    weight: 150,
+                    type: 'КМК',
+                },
+            };
+            saveData(newData);
+            return newData;
+        });
+    }, [saveData]);
 
-    const loadData = () => {
-        axios.get('/getSchedule').then((res) => {
-            //let newData = {...res.data};
-            //console.log('DataAfterFetch', newData);
-            //Object.keys(res.data).forEach((key) => newData[uuidv4()] = res.data[key]);
-            updateData(res.data);
-        })
-    };
+    const updateElement = useCallback((key, newEl) => {
+        setData((prev) => {
+            const newData = { ...prev, [key]: newEl };
+            saveData(newData);
+            return newData;
+        });
+    }, [saveData]);
 
-    const saveData = (newdata) => {
-        axios.post('/saveSchedule', newdata).then((res) => {
-            console.log('Saved!')
-        })
-    };
+    const deleteElement = useCallback((key) => {
+        setData((prev) => {
+            const newData = { ...prev };
+            delete newData[key];
+            saveData(newData);
+            return newData;
+        });
+    }, [saveData]);
 
-    const addElement = () => {
-        console.log('click')
-        const newData = {...data};
-        newData[uuidv4()] = {
-            value: 'Новая активность',
-            x: 100,
-            y:100,
-            weight: 150,
-            type: 'КМК'
-        };
-
-        updateData(newData);
-        saveData(newData)
-    };
-
-    const updater = (value, newEl) => {
-        const newData = {...data};
-        newData[value] = newEl;
-        updateData(newData);
-        saveData(newData)
-    };
-
-    const deleter = (value) => {
-        const newData = {...data};
-        delete newData[value];
-        updateData(newData);
-        saveData(newData);
-    };
-
-    {/*<button onClick={saveAndLoadData} style={{position: 'fixed', left: 80, top: 0, zIndex: 900}}>*/}
-        {/*Сохранить*/}
-    {/*</button>*/}
     return (
-    <div className="App">
-        <button onClick={addElement} style={{position: 'fixed', left: 0, top: 0, zIndex: 900}}>
-            Добавить
-        </button>
-        <CalendarBG data={data}>
-        { Object.keys(data).map((keyel) => {
-            return <TimeElement
-                        el={data[keyel]}
-                        value={keyel}
+        <div className="App">
+            <button onClick={addElement} style={ADD_BUTTON_STYLE}>
+                Добавить
+            </button>
+            <CalendarBG data={data}>
+                {Object.keys(data).map((key) => (
+                    <TimeElement
+                        key={key}
+                        el={data[key]}
+                        value={key}
                         x={mousePos.x}
                         y={mousePos.y}
-                        setSmthDragging={setSmthDragging}
-                        updater={updater}
                         data={data}
-                        setSmthEditing={setSmthEditing}
-                        deleter={deleter}
-                        key={keyel}/>;
-        })}
-        </CalendarBG>
-    </div>
-  );
+                        setSmthDragging={setIsDragging}
+                        setSmthEditing={setIsEditing}
+                        updater={updateElement}
+                        deleter={deleteElement}
+                    />
+                ))}
+            </CalendarBG>
+        </div>
+    );
 }
 
 export default App;
