@@ -48,6 +48,8 @@ function App() {
     const [isDragging, setIsDragging] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [data, setData] = useState(INITIAL_DATA);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState(null);
 
     const isDraggingRef = useRef(isDragging);
     const isEditingRef = useRef(isEditing);
@@ -88,6 +90,7 @@ function App() {
     }, [loadData]);
 
     const addElement = useCallback(() => {
+        const taskNumber = Object.keys(data).length + 1;
         setData((prev) => {
             const newData = {
                 ...prev,
@@ -96,13 +99,15 @@ function App() {
                     x: 100,
                     y: 100,
                     weight: 150,
-                    type: 'Тип1',
+                    type: 'Средний',
+                    key: `TASK-${taskNumber}`,
+                    sp: 3,
                 },
             };
             saveData(newData);
             return newData;
         });
-    }, [saveData]);
+    }, [data, saveData]);
 
     const updateElement = useCallback((key, newEl) => {
         setData((prev) => {
@@ -120,6 +125,32 @@ function App() {
             return newData;
         });
     }, [saveData]);
+
+    const onEdit = useCallback((key, task) => {
+        setEditingTask({ uuid: key, ...task });
+        setIsModalOpen(true);
+    }, []);
+
+    const saveEditedTask = useCallback(() => {
+        if (editingTask) {
+            updateElement(editingTask.uuid, {
+                value: editingTask.value,
+                x: editingTask.x,
+                y: editingTask.y,
+                weight: editingTask.sp * 50,
+                type: editingTask.type,
+                key: editingTask.key,
+                sp: editingTask.sp,
+            });
+            setIsModalOpen(false);
+            setEditingTask(null);
+        }
+    }, [editingTask, updateElement]);
+
+    const cancelEdit = useCallback(() => {
+        setIsModalOpen(false);
+        setEditingTask(null);
+    }, []);
 
     return (
         <div className="App">
@@ -139,9 +170,78 @@ function App() {
                         setSmthEditing={setIsEditing}
                         updater={updateElement}
                         deleter={deleteElement}
+                        onEdit={onEdit}
                     />
                 ))}
             </CalendarBG>
+            {isModalOpen && editingTask && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                        minWidth: '300px',
+                    }}>
+                        <h3>Редактировать задачу</h3>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label>Ключ:</label>
+                            <input
+                                type="text"
+                                value={editingTask.key}
+                                onChange={(e) => setEditingTask({ ...editingTask, key: e.target.value })}
+                                style={{ width: '100%', padding: '5px', marginTop: '5px' }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label>Название:</label>
+                            <input
+                                type="text"
+                                value={editingTask.value}
+                                onChange={(e) => setEditingTask({ ...editingTask, value: e.target.value })}
+                                style={{ width: '100%', padding: '5px', marginTop: '5px' }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label>SP (Story Points):</label>
+                            <input
+                                type="number"
+                                value={editingTask.sp}
+                                onChange={(e) => setEditingTask({ ...editingTask, sp: parseInt(e.target.value) || 0, weight: (parseInt(e.target.value) || 0) * 50 })}
+                                style={{ width: '100%', padding: '5px', marginTop: '5px' }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label>Тип:</label>
+                            <select
+                                value={editingTask.type}
+                                onChange={(e) => setEditingTask({ ...editingTask, type: e.target.value })}
+                                style={{ width: '100%', padding: '5px', marginTop: '5px' }}
+                            >
+                                <option>Высший</option>
+                                <option>Высокий</option>
+                                <option>Средний</option>
+                                <option>Низкий</option>
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <button onClick={cancelEdit} style={{ padding: '5px 10px' }}>Отмена</button>
+                            <button onClick={saveEditedTask} style={{ padding: '5px 10px', backgroundColor: '#36B37E', color: 'white', border: 'none', borderRadius: '4px' }}>Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
