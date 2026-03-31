@@ -96,7 +96,7 @@ function App() {
                     x: 100,
                     y: 100,
                     weight: 150,
-                    type: 'КМК',
+                    type: 'Тип1',
                 },
             };
             saveData(newData);

@@ -1,70 +1,167 @@
-# Getting Started with Create React App
+# TechnoPlanner
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+![Превью приложения](./public/preview.jpg)
 
-## Available Scripts
+[![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
+[![Express](https://img.shields.io/badge/Express-4.18.2-lightgrey.svg)](https://expressjs.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-16+-green.svg)](https://nodejs.org/)
 
-In the project directory, you can run:
+Интерактивное веб-приложение для планирования и распределения задач по спринтам в стиле Scrum. Позволяет визуально управлять задачами с помощью drag-and-drop интерфейса.
 
-### `npm start`
+## ✨ Возможности
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Визуальное планирование**: Перетаскивайте задачи на временной шкале
+- **Управление весом задач**: Изменяйте продолжительность задач с помощью колесика мыши
+- **Типы задач**: Классифицируйте задачи по типам (Тип1, Тип2, Тип3)
+- **Предотвращение конфликтов**: Автоматическое разрешение пересечений задач
+- **Автосохранение**: Данные сохраняются автоматически на сервере
+- **Статистика спринтов**: Отображение количества задач и story points по спринтам
+- **Редактирование на месте**: Двойной клик для редактирования задач
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🚀 Быстрый старт
 
-### `npm test`
+### Предварительные требования
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (версия 16 или выше)
+- npm или yarn
 
-### `npm run build`
+### Установка
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Клонируйте репозиторий:
+```bash
+git clone <repository-url>
+cd technoplanner
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Установите зависимости для фронтенда:
+```bash
+npm install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. Установите зависимости для бэкенда:
+```bash
+cd backend
+npm install
+cd ..
+```
 
-### `npm run eject`
+### Запуск
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Запустите бэкенд-сервер:
+```bash
+cd backend
+node technoplanner.js
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Сервер запустится на `http://localhost:9000`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+2. В новом терминале запустите фронтенд:
+```bash
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Приложение откроется в браузере на `http://localhost:3000`
 
-## Learn More
+## 📖 Использование
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Добавление задач
+- Нажмите кнопку "Добавить" в левом верхнем углу
+- Новая задача появится на экране
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Перемещение задач
+- Перетащите задачу за угол (⤭) или за основную область
+- Задачи автоматически выравниваются по сетке 50px
 
-### Code Splitting
+### Изменение размера
+- Наведите курсор на задачу и используйте колесико мыши
+- Вверх - увеличить размер, вниз - уменьшить
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Редактирование задач
+- Кликните на иконку ✎ для редактирования текста и типа задачи
+- Нажмите Enter для сохранения изменений
 
-### Analyzing the Bundle Size
+### Удаление задач
+- Кликните на крестик ⨉ в правом верхнем углу задачи
+- Подтвердите удаление в диалоговом окне
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## 🏗️ Архитектура
 
-### Making a Progressive Web App
+### Фронтенд (React)
+- **App.js**: Основной компонент приложения
+- **CalendarBG.js**: Фон календаря с сеткой и статистикой
+- **TimeElement.js**: Компонент отдельной задачи
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Бэкенд (Express.js)
+- **technoplanner.js**: Сервер с REST API
+- **data.json**: Хранение данных задач
 
-### Advanced Configuration
+### API Endpoints
+- `GET /getSchedule` - Получение всех задач
+- `POST /saveSchedule` - Сохранение всех задач
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 🎨 Цветовая схема
 
-### Deployment
+- **Тип1**: Зеленый (#36B37E)
+- **Тип2**: Голубой (#00B8D9)
+- **Тип3**: Оранжевый (#FFAB00)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## 📊 Формат данных
 
-### `npm run build` fails to minify
+Каждая задача хранится в формате:
+```json
+{
+  "uuid": {
+    "value": "Название задачи",
+    "x": 100,
+    "y": 200,
+    "weight": 150,
+    "type": "Тип1"
+  }
+}
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `x`, `y`: Координаты на экране
+- `weight`: Вес задачи (в пикселях, соответствует времени)
+- `type`: Тип задачи
+
+## 🔧 Разработка
+
+### Структура проекта
+```
+technoplanner/
+├── backend/
+│   ├── technoplanner.js    # Сервер Express
+│   ├── package.json        # Зависимости бэкенда
+│   └── data.json          # Данные задач
+├── src/
+│   ├── App.js             # Главный компонент
+│   ├── App.css            # Стили
+│   └── Components/
+│       ├── CalendarBG.js  # Фон календаря
+│       └── TimeElement.js # Компонент задачи
+├── public/
+├── build/                 # Собранный фронтенд
+└── package.json           # Зависимости фронтенда
+```
+
+### Используемые технологии
+- **Frontend**: React 18, React DnD, Axios
+- **Backend**: Express.js, CORS
+- **Data Storage**: JSON file (для простоты)
+
+## 🤝 Вклад в проект
+
+1. Форкните проект
+2. Создайте ветку для вашей фичи (`git checkout -b feature/AmazingFeature`)
+3. Зафиксируйте изменения (`git commit -m 'Add some AmazingFeature'`)
+4. Отправьте в ветку (`git push origin feature/AmazingFeature`)
+5. Откройте Pull Request
+
+## 📄 Лицензия
+
+Этот проект распространяется под лицензией MIT. См. файл `LICENSE` для подробностей.
+
+## 📞 Контакты
+
+Если у вас есть вопросы или предложения, создайте issue в репозитории.
+

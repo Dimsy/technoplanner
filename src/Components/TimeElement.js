@@ -19,9 +19,9 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
     const getColor = (type) => {
         switch (type) {
             case 'none':     return 'lightGrey';
-            case 'ППРБ':     return '#00B8D9';
-            case 'КМК':      return '#36B37E';
-            case 'Согласия': return '#FFAB00';
+            case 'Тип1':      return '#36B37E';
+            case 'Тип2':     return '#00B8D9';
+            case 'Тип3': return '#FFAB00';
             default:         return 'lightGrey';
         }
     };
@@ -215,9 +215,9 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
                             onKeyDown={handleKeyDown}
                         />
                         <select style={{ width: '18%' }} onChange={setType} value={currentType}>
-                            <option>КМК</option>
-                            <option>ППРБ</option>
-                            <option>Согласия</option>
+                            <option>Тип1</option>
+                            <option>Тип2</option>
+                            <option>Тип3</option>
                         </select>
                     </div>
                 )}
