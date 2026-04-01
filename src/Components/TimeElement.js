@@ -3,6 +3,9 @@ import { useState } from 'react';
 
 // value === key!11
 export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, setSmthEditing, deleter, onEdit}) => {
+    const LEFT_PANEL_WIDTH = 220;
+    const GRID_TOP_OFFSET = 50;
+
     const [isDragging, setIsDragging] = useState(false);
     const [position, setPosition] = useState({x: el.x, y: el.y});
     const [weight, setWeight] = useState(el.weight);
@@ -44,9 +47,10 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
     const snapPositionToRow = (rawX, rawY) => {
         // Снэппинг к сетке 50px
         // Привязываем левый верхний угол элемента к сетке относительно курсора
-        let newX = Math.floor(x / 50) * 50;
-        let newY = Math.floor(y / 50) * 50;
-        if (newY < 50) newY = 50;
+        let newX = Math.floor((rawX - LEFT_PANEL_WIDTH) / 50) * 50;
+        if (newX < 0) newX = 0;
+        let newY = Math.floor((rawY - GRID_TOP_OFFSET) / 50) * 50;
+        if (newY < 0) newY = 0;
 
         // Проверяем коллизии и сдвигаем элемент вправо за крайний блокирующий блок
         const collisions = findCollisions(newX, newY, weight);
@@ -65,7 +69,7 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         }
 
         // Проверяем, помещается ли элемент в новое место
-        if (newX + weight > window.screen.availWidth) {
+        if (newX + weight > window.screen.availWidth - LEFT_PANEL_WIDTH) {
             alert("Недостаточно SP!");
             return; // Не перемещаем элемент
         }
@@ -109,14 +113,6 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         updater(value, { value: el.value, x: position.x, y: position.y, weight: newWeight, type: el.type, key: el.key, sp: newSp });
     };
 
-    const componentStyle = {
-        height: 20,
-        width: 20,
-        position: 'absolute',
-        left: 0,
-        bottom: 0,
-    };
-
     const positionStyle = {
         height: 50,
         width: el.sp * 50,
@@ -124,7 +120,7 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         backgroundColor: getColor(el.type),
         border: '1px solid rgba(0,0,0,0.12)',
         boxShadow: '0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12)',
-        opacity: position.y >= 50 ? 1 : 0.5,
+        opacity: 1,
         zIndex: isDragging ? 1000 : 1,
     };
 
@@ -132,8 +128,8 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         positionStyle.top = y - 25;
         positionStyle.left = x - 20;
     } else {
-        positionStyle.top = position.y;
-        positionStyle.left = position.x;
+        positionStyle.top = GRID_TOP_OFFSET + position.y;
+        positionStyle.left = LEFT_PANEL_WIDTH + position.x;
     }
 
     const toggleEdit = () => {

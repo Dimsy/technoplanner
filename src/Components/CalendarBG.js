@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 export const CalendarBG = ({children, data}) => {
     const [sprintInfosT, setSprintInfosT] = useState([]);
     const [sprintInfosS, setSprintInfosS] = useState([]);
+    const LEFT_PANEL_WIDTH = 170;
+    const GRID_TOP_OFFSET = 50;
+
     const bgStyle = {
         position: 'absolute',
         overflow: 'hidden'
     };
-    const cols = Math.round(window.screen.availWidth / 50);
-    const rows = Math.round(window.screen.availHeight / 50);
+    const cols = Math.round((window.screen.availWidth - LEFT_PANEL_WIDTH) / 50);
+    const rows = Math.round((window.screen.availHeight - GRID_TOP_OFFSET) / 50);
 
     useEffect(() => {
         const sprintsCount = Math.round(window.screen.availWidth/500);
@@ -42,28 +45,14 @@ export const CalendarBG = ({children, data}) => {
         const rcols = [];
         for (let i=0; i<= rows; i++) {
             const rrows = [];
-            for (let j=0; j<= cols; j++) {
-                if (i >=0 && i <1) {
-                    rrows.push(<div style={{
-                        backgroundColor: 'white',
-                        height: 50,
-                        width: 50,
-                        position: 'fixed',
-                        top: i*50,
-                        left: j*50,
-                        border: '1px solid white',
-                        boxSizing: 'border-box',
-                        opacity: 0.6,
-                        '-moz-box-sizing': 'border-box',
-                        '-webkit-box-sizing': 'border-box'
-                    }}></div>)
-                } else if (j % 10 === 0) {
+            for (let j=1; j<= cols; j++) {
+                if (j % 10 === 0) {
                     rrows.push(<div style={{
                         height: 50,
                         width: 50,
                         position: 'fixed',
-                        top: i*50,
-                        left: j*50,
+                        top: GRID_TOP_OFFSET + i*50,
+                        left: LEFT_PANEL_WIDTH + j*50,
                         opacity: 0.6,
                         border: '1px solid lightGrey',
                         boxSizing: 'border-box',
@@ -76,8 +65,8 @@ export const CalendarBG = ({children, data}) => {
                         position: 'fixed',
                         height: 50,
                         width: 50,
-                        top: i*50,
-                        left: j*50,
+                        top: GRID_TOP_OFFSET + i*50,
+                        left: LEFT_PANEL_WIDTH + j*50,
                         opacity: 0.6,
                         border: '1px solid lightGrey',
                         boxSizing: 'border-box',
@@ -96,7 +85,7 @@ export const CalendarBG = ({children, data}) => {
         <div style={bgStyle}>
             {sprintInfosT.map((task,i) => <div style={{
                 position: 'fixed',
-                left: 50+i*10*50,
+                left: LEFT_PANEL_WIDTH + 50 + i*10*50,
                 top: 20
             }}>
                 {`Всего задач: ${task} SP: ${sprintInfosS[i]}`}
