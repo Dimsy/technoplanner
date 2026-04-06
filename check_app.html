@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Проверка приложения TechnoPlanner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-case {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            background-color: #f8f9fa;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Проверка приложения TechnoPlanner</h1>
+    
+    <div class="status success">
+        <strong>✅ Приложение запущено</strong>
+        <p>Сервер разработки работает на порту 3001</p>
+        <p><a href="http://localhost:3001" target="_blank">Открыть приложение</a></p>
+    </div>
+    
+    <h2>Тестирование функции выбора спринта</h2>
+    
+    <div class="test-case">
+        <h3>Тест 1: Клик на маркер спринта</h3>
+        <p><strong>Ожидаемый результат:</strong></p>
+        <ul>
+            <li>Маркер спринта должен выделиться синим цветом</li>
+            <li>В заголовке панели людей должен появиться текст "Спринт X"</li>
+            <li>Проценты занятости людей должны пересчитаться</li>
+            <li>Должна появиться кнопка "Показать все спринты"</li>
+        </ul>
+        <button onclick="window.open('http://localhost:3001', '_blank')">Открыть для тестирования</button>
+    </div>
+    
+    <div class="test-case">
+        <h3>Тест 2: Сброс выбора спринта</h3>
+        <p><strong>Ожидаемый результат:</strong></p>
+        <ul>
+            <li>При клике на кнопку "Показать все спринты" выделение должно сняться</li>
+            <li>Занятость должна вернуться к исходным значениям</li>
+            <li>Кнопка "Показать все спринты" должна исчезнуть</li>
+            <li>При клике на уже выбранный спринт выделение также должно сниматься</li>
+        </ul>
+    </div>
+    
+    <div class="test-case">
+        <h3>Тест 3: Расчет занятости по спринту</h3>
+        <p><strong>Ожидаемый результат:</strong></p>
+        <ul>
+            <li>При выборе спринта занятость должна рассчитываться только для задач в этом спринте</li>
+            <li>Для задач, которые частично в спринте, SP должны рассчитываться пропорционально</li>
+            <li>При сбросе выбора должны учитываться все задачи</li>
+        </ul>
+    </div>
+    
+    <h2>Изменения в коде:</h2>
+    <ul>
+        <li><strong>App.js:</strong> Добавлен state selectedSprint и функции для управления им</li>
+        <li><strong>PeopleList.js:</strong> Добавлена фильтрация задач по выбранному спринту и кнопка сброса</li>
+        <li><strong>CalendarBG.js:</strong> Маркеры спринтов стали кликабельными с визуальным выделением</li>
+    </ul>
+    
+    <div class="status warning">
+        <strong>⚠️ Важно:</strong>
+        <p>Для работы приложения должен быть запущен backend сервер на порту 9000</p>
+        <p>Если backend не запущен, данные будут загружаться из начального состояния</p>
+    </div>
+    
+    <script>
+        // Простая проверка доступности приложения
+        fetch('http://localhost:3001')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Приложение доступно на localhost:3001');
+                } else {
+                    console.warn('⚠️ Приложение возвращает статус:', response.status);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Ошибка при проверке приложения:', error);
+            });
+    </script>
+</body>
+</html>

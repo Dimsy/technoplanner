@@ -1,0 +1,59 @@
+const data = {
+    "task-1": {"value":"Ставить дедлайны на 'когда-нибудь'","x":550,"y":350,"weight":300,"type":"Высший","key":"TASK-1","sp":6},
+    "task-2": {"value":"Доказывать начальству, что Земля плоская","x":50,"y":100,"weight":300,"type":"Высокий","key":"TASK-2","sp":6},
+    "task-3": {"value":"Писать код, который работает только по пятницам 13-го","x":550,"y":150,"weight":300,"type":"Высший","key":"TASK-3","sp":6},
+    "task-4": {"value":"Приходить на работу в пижаме","x":500,"y":50,"weight":200,"type":"Низкий","key":"TASK-4","sp":4},
+    "task-5": {"value":"Выполнять задачи из параллельной вселенной","x":1200,"y":100,"weight":350,"type":"Высокий","key":"TASK-5","sp":7},
+    "task-6": {"value":"Объявлять войну кофемашине","x":0,"y":250,"weight":450,"type":"Высший","key":"TASK-6","sp":9},
+    "task-7": {"value":"Жаловаться, что воздух в офисе слишком воздушный","x":850,"y":300,"weight":300,"type":"Средний","key":"TASK-7","sp":6},
+    "task-8": {"value":"Тратить рабочее время на обучение кота программированию","x":1250,"y":250,"weight":350,"type":"Низкий","key":"TASK-8","sp":7},
+    "task-9": {"value":"На демо показывать котиков из интернета","x":1550,"y":150,"weight":300,"type":"Высший","key":"TASK-9","sp":6},
+    "task-10": {"value":"Слушать обратную связь в наушниках с шумоподавлением","x":1150,"y":300,"weight":250,"type":"Высокий","key":"TASK-10","sp":5},
+    "task-11": {"value":"Документировать код эмодзи и мемами","x":1400,"y":300,"weight":200,"type":"Высший","key":"TASK-11","sp":4},
+    "task-12": {"value":"Ходить на встречи в соседний офис","x":1550,"y":400,"weight":300,"type":"Высокий","key":"TASK-12","sp":6},
+    "task-14": {"value":"Рассказывать, как всё было лучше в 90-х","x":50,"y":350,"weight":450,"type":"Высший","key":"TASK-14","sp":9},
+    "task-15": {"value":"Обновлять статус задач на 'жду вдохновения'","x":900,"y":200,"weight":250,"type":"Низкий","key":"TASK-15","sp":5},
+    "TASK-66": {"value":"Приходить на встречи с опозданием в неделю","x":1300,"y":400,"weight":250,"type":"Высокий","key":"TASK-66","sp":5},
+    "TASK-67": {"value":"Предлагать переписать всё на COBOL","x":700,"y":50,"weight":250,"type":"Высокий","key":"TASK-67","sp":5},
+    "cca76449-c9c6-4f67-9011-cab9047077b5": {"value":"Устраивать офисные вечеринки в рабочее время","x":150,"y":500,"weight":400,"type":"Высший","key":"TASK-17","sp":8}
+};
+
+console.log("Задачи с y=350 (Елена Еленова):");
+Object.values(data).forEach(task => {
+    if (task.y === 350) {
+        console.log(`- ${task.value}: x=${task.x}, weight=${task.weight}, sp=${task.sp}`);
+        console.log(`  Диапазон: ${task.x} - ${task.x + task.weight}`);
+        console.log(`  Попадает в спринт 0 (0-500): ${task.x >= 0 && task.x + task.weight <= 500}`);
+        console.log(`  SP в спринте: ${task.sp} (полностью в спринте)`);
+        console.log(`  Процент занятости: ${(task.sp / 10 * 100).toFixed(1)}%`);
+    }
+});
+
+console.log("\nВсе задачи для Елены Еленовой (y=350 ± 5px):");
+Object.values(data).forEach(task => {
+    if (Math.abs(task.y - 350) < 5) {
+        console.log(`- ${task.value}: y=${task.y}, x=${task.x}, weight=${task.weight}, sp=${task.sp}`);
+    }
+});
+
+console.log("\nПроверка расчета для спринта 0:");
+const sprintStart = 0 * 500;
+const sprintEnd = (0 + 1) * 500;
+console.log(`Спринт 0: ${sprintStart} - ${sprintEnd}`);
+
+Object.values(data).forEach(task => {
+    if (Math.abs(task.y - 350) < 5) {
+        const taskStart = task.x;
+        const taskEnd = task.x + task.weight;
+        const overlapStart = Math.max(taskStart, sprintStart);
+        const overlapEnd = Math.min(taskEnd, sprintEnd);
+        const overlapWidth = Math.max(0, overlapEnd - overlapStart);
+        const overlapSP = task.sp * (overlapWidth / task.weight);
+        
+        console.log(`\n${task.value}:`);
+        console.log(`  Задача: ${taskStart} - ${taskEnd}`);
+        console.log(`  Пересечение со спринтом: ${overlapStart} - ${overlapEnd}`);
+        console.log(`  Ширина пересечения: ${overlapWidth}`);
+        console.log(`  SP в спринте: ${overlapSP.toFixed(2)} из ${task.sp}`);
+    }
+});

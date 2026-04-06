@@ -1,14 +1,62 @@
 import '../App.css';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // value === key!11
 export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, setSmthEditing, deleter, onEdit}) => {
     const LEFT_PANEL_WIDTH = 220;
     const GRID_TOP_OFFSET = 50;
+    const CELL_SIZE = 50;
+    const SPRINT_WIDTH = 500; // 10 ячеек × 50px
+    const TOTAL_SPRINTS = 26;
+    const TOTAL_WIDTH = TOTAL_SPRINTS * SPRINT_WIDTH; // 13000px
+    const DATA_X_OFFSET = 50; // Смещение координат X в данных
 
     const [isDragging, setIsDragging] = useState(false);
+    const [dragPosition, setDragPosition] = useState({x: 0, y: 0});
     const [position, setPosition] = useState({x: el.x, y: el.y});
     const [weight, setWeight] = useState(el.weight);
+
+    // Синхронизируем состояние с пропсами при их изменении
+    useEffect(() => {
+        setPosition({x: el.x, y: el.y});
+        setWeight(el.weight);
+    }, [el.x, el.y, el.weight]);
+
+    // Отслеживаем мышь при перетаскивании
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e) => {
+            setDragPosition({x: e.clientX, y: e.clientY});
+        };
+
+        const handleTouchMove = (e) => {
+            const touch = (e.originalEvent ?? e).touches[0]
+                ?? (e.originalEvent ?? e).changedTouches[0];
+            setDragPosition({x: touch.pageX, y: touch.pageY});
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('touchmove', handleTouchMove);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, [isDragging]);
+
+    // Функция для проверки, пересекает ли задача границу спринта
+    const crossesSprintBoundary = () => {
+        const visualX = position.x - DATA_X_OFFSET;
+        const taskEnd = visualX + weight;
+        
+        const startSprint = Math.floor(visualX / SPRINT_WIDTH);
+        const endSprint = Math.floor((taskEnd - 0.001) / SPRINT_WIDTH); // -0.001 чтобы задача, заканчивающаяся точно на границе, считалась в предыдущем спринте
+        
+        // Задача пересекает границу спринта, если начинается и заканчивается в разных спринтах
+        // Границы спринтов находятся на позициях, кратных SPRINT_WIDTH (0, 500, 1000, ...)
+        return startSprint !== endSprint;
+    };
 
     const getColor = (type) => {
         switch (type) {
@@ -46,41 +94,59 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
      */
     const snapPositionToRow = (rawX, rawY) => {
         // Снэппинг к сетке 50px
-        // Привязываем левый верхний угол элемента к сетке относительно курсора
-        let newX = Math.floor((rawX - LEFT_PANEL_WIDTH) / 50) * 50;
+        // rawX - координата мыши относительно окна
+        // Контейнер начинается в 220px от левого края (ширина панели людей)
+        const containerOffset = LEFT_PANEL_WIDTH;
+        let newX = Math.floor((rawX - containerOffset) / CELL_SIZE) * CELL_SIZE;
         if (newX < 0) newX = 0;
-        let newY = Math.floor((rawY - GRID_TOP_OFFSET) / 50) * 50;
+        let newY = Math.floor((rawY - GRID_TOP_OFFSET) / CELL_SIZE) * CELL_SIZE;
         if (newY < 0) newY = 0;
 
+        // Проверяем, не начинается ли задача на границе спринта
+        // Граница спринта - каждая 10-я ячейка (visualX кратно SPRINT_WIDTH)
+        const visualX = newX;
+        if (visualX % SPRINT_WIDTH === 0 && visualX > 0) {
+            // Сдвигаем задачу на одну ячейку влево, чтобы она не начиналась на границе
+            newX = visualX - CELL_SIZE;
+        }
+
         // Проверяем коллизии и сдвигаем элемент вправо за крайний блокирующий блок
-        const collisions = findCollisions(newX, newY, weight);
+        // findCollisions ожидает координаты со смещением DATA_X_OFFSET
+        const collisions = findCollisions(newX + DATA_X_OFFSET, newY, weight);
 
         if (collisions.length > 0) {
             // Находим правый край самого правого пересекающегося элемента
             const rightmostEdge = Math.max(...collisions.map((c) => c.x + c.weight));
-            newX = rightmostEdge;
+            newX = rightmostEdge - DATA_X_OFFSET; // Вычитаем смещение
+            
+            // Снова проверяем границу спринта после сдвига
+            const newVisualX = newX;
+            if (newVisualX % SPRINT_WIDTH === 0 && newVisualX > 0) {
+                newX = newVisualX - CELL_SIZE;
+            }
         }
 
         // Проверяем, не пересекается ли элемент с другими после сдвига
-        const newCollisions = findCollisions(newX, newY, weight);
+        const newCollisions = findCollisions(newX + DATA_X_OFFSET, newY, weight);
         if (newCollisions.length > 0) {
             alert("Недостаточно SP!");
             return; // Не перемещаем элемент
         }
 
         // Проверяем, помещается ли элемент в новое место
-        if (newX + weight > window.screen.availWidth - LEFT_PANEL_WIDTH) {
+        // Учитываем смещение DATA_X_OFFSET
+        if (newX + DATA_X_OFFSET + weight > TOTAL_WIDTH) {
             alert("Недостаточно SP!");
             return; // Не перемещаем элемент
         }
 
-        updater(value, { value: el.value, x: newX, y: newY, weight, type: el.type, key: el.key, sp: el.sp });
-        setPosition({ x: newX, y: newY });
+        // Добавляем DATA_X_OFFSET к координате X для совместимости со старыми данными
+        updater(value, { value: el.value, x: newX + DATA_X_OFFSET, y: newY, weight, type: el.type, key: el.key, sp: el.sp });
+        setPosition({ x: newX + DATA_X_OFFSET, y: newY });
     };
 
     const handleDragEnter = (e) => {
         e.preventDefault();
-        setSmthDragging(true);
         setIsDragging(true);
     };
 
@@ -88,10 +154,9 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
         e.preventDefault();
         e.stopPropagation();
         if (e.button !== 2) {
-            setSmthDragging(false);
             setIsDragging(false);
             // Компенсируем смещение для позиционирования курсора в середине по вертикали с отступом слева
-            snapPositionToRow(x - 20, y - 25);
+            snapPositionToRow(dragPosition.x - 20, dragPosition.y - 25);
         }
     };
 
@@ -100,7 +165,13 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
 
         if (e.deltaY < 0) {
             // Расширяем вправо — проверяем, не заблокировано ли место
-            const collisions = findCollisions(position.x, position.y, (el.sp + 1) * 50);
+            const newWeight = (el.sp + 1) * CELL_SIZE;
+            // Проверяем, не выходит ли задача за правую границу
+            if (position.x + newWeight > TOTAL_WIDTH) {
+                alert("Недостаточно SP!");
+                return;
+            }
+            const collisions = findCollisions(position.x, position.y, newWeight);
             if (collisions.length === 0) {
                 newSp = el.sp + 1;
             }
@@ -108,7 +179,7 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
             newSp = Math.max(1, el.sp - 1);
         }
 
-        const newWeight = newSp * 50;
+        const newWeight = newSp * CELL_SIZE;
         setWeight(newWeight);
         updater(value, { value: el.value, x: position.x, y: position.y, weight: newWeight, type: el.type, key: el.key, sp: newSp });
     };
@@ -116,29 +187,51 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
     const positionStyle = {
         height: 50,
         width: el.sp * 50,
-        position: 'fixed',
+        position: 'absolute',
         backgroundColor: getColor(el.type),
         border: '1px solid rgba(0,0,0,0.12)',
         boxShadow: '0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12)',
-        opacity: 1,
+        opacity: crossesSprintBoundary() ? 0.7 : 1, // Прозрачность для задач, пересекающих границу спринта
         zIndex: isDragging ? 1000 : 1,
+        boxSizing: 'border-box'
     };
 
     if (isDragging) {
-        positionStyle.top = y - 25;
-        positionStyle.left = x - 20;
+        positionStyle.position = 'fixed';
+        positionStyle.top = dragPosition.y - 25;
+        positionStyle.left = dragPosition.x - 20;
     } else {
+        positionStyle.position = 'absolute';
         positionStyle.top = GRID_TOP_OFFSET + position.y;
-        positionStyle.left = LEFT_PANEL_WIDTH + position.x;
+        positionStyle.left = Math.max(0, position.x - 50); // Компенсируем смещение ячеек
     }
 
-    const toggleEdit = () => {
+    const toggleEdit = (e) => {
+        e.stopPropagation();
         onEdit(value, el);
     };
 
-    const deleteElement = () => {
+    const deleteElement = (e) => {
+        e.stopPropagation();
         if (window.confirm(`Точно хочешь удалить "${el.value}"?`)) {
             deleter(value);
+        }
+    };
+
+    // Создаем текст подсказки
+    const getTooltipText = () => {
+        const visualX = position.x - DATA_X_OFFSET;
+        const taskEnd = visualX + weight;
+        const startSprint = Math.floor(visualX / SPRINT_WIDTH);
+        const endSprint = Math.floor((taskEnd - 0.001) / SPRINT_WIDTH); // -0.001 чтобы задача, заканчивающаяся точно на границе, считалась в предыдущем спринте
+        
+        // Задача пересекает границу спринта, если начинается и заканчивается в разных спринтах
+        const crossesBoundary = startSprint !== endSprint;
+        
+        if (crossesBoundary) {
+            return `${el.key}: ${el.value} (SP: ${el.sp})\n⚠️ Задача пересекает границу спринта ${startSprint + 1}-${endSprint + 1}\nЗадача не будет полностью готова в одном спринте`;
+        } else {
+            return `${el.key}: ${el.value} (SP: ${el.sp})`;
         }
     };
 
@@ -147,7 +240,7 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
             style={positionStyle}
             className={'noselect'}
             onWheel={(e) => handleScroll(e)}
-            title={`${el.key}: ${el.value} (SP: ${el.sp})`}
+            title={getTooltipText()}
         >
             {/* Кнопка редактирования */}
             <div
@@ -184,6 +277,7 @@ export const TimeElement = ({el, value, x, y, setSmthDragging, updater, data, se
                     textAlign: 'center',
                     verticalAlign: 'middle',
                     height: 50,
+                    boxSizing: 'border-box'
                 }}
             >
                 <div style={{

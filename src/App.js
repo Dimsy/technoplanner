@@ -8,14 +8,11 @@ import axios from 'axios';
 
 const INITIAL_DATA = {};
 
-const LEFT_PANEL_WIDTH = 220;
-
-const ADD_BUTTON_STYLE = {
-    position: 'fixed',
-    left: LEFT_PANEL_WIDTH + 10,
-    top: 0,
-    zIndex: 900,
-};
+const CELL_SIZE = 50;
+const SPRINT_WIDTH = 500; // 10 ячеек × 50px
+const TOTAL_SPRINTS = 26;
+const TOTAL_WIDTH = TOTAL_SPRINTS * SPRINT_WIDTH; // 13000px
+const ROW_HEIGHT = 50;
 
 const AUTO_REFRESH_INTERVAL = 3000;
 
@@ -69,12 +66,13 @@ function App() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
     const [people, setPeople] = useState(TEST_PEOPLE);
-    const [isPeopleModalOpen, setIsPeopleModalOpen] = useState(false);
+    // const [isPeopleModalOpen, setIsPeopleModalOpen] = useState(false); // Зарезервировано для будущего использования
     const [editingPerson, setEditingPerson] = useState(null);
+    const [selectedSprint, setSelectedSprint] = useState(null); // null - все спринты, 0-25 - конкретный спринт
 
     const getAssigneeRow = useCallback((assigneeId) => {
         const idx = people.findIndex(p => p.id === assigneeId);
-        return idx >= 0 ? idx * 50 : 0;
+        return idx >= 0 ? idx * ROW_HEIGHT : 0;
     }, [people]);
 
     const isDraggingRef = useRef(isDragging);
@@ -83,7 +81,7 @@ function App() {
     useEffect(() => { isDraggingRef.current = isDragging; }, [isDragging]);
     useEffect(() => { isEditingRef.current = isEditing; }, [isEditing]);
 
-    const mousePos = usePointerPosition(isDragging);
+    // const mousePos = usePointerPosition(isDragging); // Зарезервировано для будущего использования
 
     const loadData = useCallback(async () => {
         try {
@@ -124,7 +122,7 @@ function App() {
                     value: 'Новая активность',
                     x: 100,
                     y: 0,
-                    weight: 150,
+                    weight: 3 * CELL_SIZE, // 3 SP × 50px
                     type: 'Средний',
                     key: `TASK-${taskNumber}`,
                     sp: 3,
@@ -165,7 +163,7 @@ function App() {
                 value: editingTask.value,
                 x: editingTask.x,
                 y: assigneeRow,
-                weight: editingTask.sp * 50,
+                weight: editingTask.sp * CELL_SIZE,
                 type: editingTask.type,
                 key: editingTask.key,
                 sp: editingTask.sp,
@@ -181,32 +179,58 @@ function App() {
         setEditingTask(null);
     }, []);
 
+    const handleResetSprintSelection = useCallback(() => {
+        setSelectedSprint(null);
+    }, []);
+
     return (
         <div className="App">
-            <button onClick={addElement} style={ADD_BUTTON_STYLE}>
-                Добавить
-            </button>
-            <button onClick={() => setIsPeopleModalOpen(true)} style={{ position: 'fixed', left: 300, top: 0, zIndex: 900 }}>
-                Люди
-            </button>
-            <CalendarBG data={data}>
-                {Object.keys(data).map((key) => (
-                    <TimeElement
-                        key={key}
-                        el={data[key]}
-                        value={key}
-                        x={mousePos.x}
-                        y={mousePos.y}
-                        data={data}
-                        setSmthDragging={setIsDragging}
-                        setSmthEditing={setIsEditing}
-                        updater={updateElement}
-                        deleter={deleteElement}
-                        onEdit={onEdit}
-                    />
-                ))}
-            </CalendarBG>
-            <PeopleList people={people} tasks={data} />
+            <PeopleList 
+                people={people} 
+                tasks={data} 
+                selectedSprint={selectedSprint}
+                onAddPerson={() => setEditingPerson({ id: uuidv4(), name: '' })}
+                onAddTask={addElement}
+                onEditPerson={(person) => setEditingPerson(person)}
+                onResetSprintSelection={handleResetSprintSelection}
+            />
+            <div style={{
+                position: 'fixed',
+                left: '220px', // Ширина панели людей
+                top: 0,
+                right: 0,
+                bottom: 0,
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                backgroundColor: '#f5f5f5'
+            }}>
+                <div style={{
+                    width: TOTAL_WIDTH + 'px', // 26 спринтов × 500px
+                    height: 'calc(100vh - 50px)', // Высота окна минус высота заголовка спринтов
+                    position: 'relative',
+                    overflowY: 'hidden'
+                }}>
+                    <CalendarBG 
+                        data={data} 
+                        selectedSprint={selectedSprint}
+                        onSprintSelect={setSelectedSprint}
+                    >
+                        {Object.keys(data).map((key) => (
+                            <TimeElement
+                                key={key}
+                                el={data[key]}
+                                value={key}
+                                data={data}
+                                setSmthDragging={setIsDragging}
+                                setSmthEditing={setIsEditing}
+                                updater={updateElement}
+                                deleter={deleteElement}
+                                onEdit={onEdit}
+                            />
+                        ))}
+                    </CalendarBG>
+                </div>
+            </div>
             {isModalOpen && editingTask && (
                 <div style={{
                     position: 'fixed',
@@ -251,7 +275,7 @@ function App() {
                             <input
                                 type="number"
                                 value={editingTask.sp}
-                                onChange={(e) => setEditingTask({ ...editingTask, sp: parseInt(e.target.value) || 0, weight: (parseInt(e.target.value) || 0) * 50 })}
+                                onChange={(e) => setEditingTask({ ...editingTask, sp: parseInt(e.target.value) || 0, weight: (parseInt(e.target.value) || 0) * CELL_SIZE })}
                                 style={{ width: '100%', padding: '5px', marginTop: '5px' }}
                             />
                         </div>
@@ -290,7 +314,9 @@ function App() {
                     </div>
                 </div>
             )}
-            {isPeopleModalOpen && (
+            
+            {/* Модальное окно для добавления/редактирования человека */}
+            {editingPerson && (
                 <div style={{
                     position: 'fixed',
                     top: 0,
@@ -304,35 +330,76 @@ function App() {
                     zIndex: 1000,
                 }}>
                     <div style={{
-                        backgroundColor: 'white',
-                        padding: '20px',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                        minWidth: '400px',
-                        maxHeight: '80%',
-                        overflowY: 'auto',
+                        backgroundColor: '#2c3e50',
+                        padding: '25px',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                        minWidth: '350px',
+                        maxWidth: '500px',
+                        border: '2px solid #34495e'
                     }}>
-                        <h3>Управление людьми</h3>
-                        <ul>
-                            {people.map(p => (
-                                <li key={p.id} style={{ marginBottom: '10px' }}>
-                                    {p.name}
-                                    <button onClick={() => setEditingPerson(p)} style={{ marginLeft: '10px' }}>Редактировать</button>
-                                    <button onClick={() => setPeople(prev => prev.filter(pp => pp.id !== p.id))} style={{ marginLeft: '10px' }}>Удалить</button>
-                                </li>
-                            ))}
-                        </ul>
-                        <button onClick={() => setEditingPerson({ id: uuidv4(), name: '' })} style={{ marginTop: '10px' }}>Добавить человека</button>
-                        {editingPerson && (
-                            <div style={{ marginTop: '20px' }}>
-                                <label>Имя:</label>
-                                <input
-                                    type="text"
-                                    value={editingPerson.name}
-                                    onChange={(e) => setEditingPerson({ ...editingPerson, name: e.target.value })}
-                                    style={{ width: '100%', padding: '5px', marginTop: '5px' }}
-                                />
-                                <button onClick={() => {
+                        <h3 style={{ 
+                            color: '#ecf0f1', 
+                            marginBottom: '20px',
+                            textAlign: 'center',
+                            borderBottom: '2px solid #3498db',
+                            paddingBottom: '10px'
+                        }}>
+                            {editingPerson.id && people.find(p => p.id === editingPerson.id) ? '✏️ Редактировать человека' : '👤 Добавить человека'}
+                        </h3>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ 
+                                display: 'block', 
+                                color: '#bdc3c7', 
+                                marginBottom: '8px',
+                                fontWeight: '500'
+                            }}>
+                                Имя:
+                            </label>
+                            <input
+                                type="text"
+                                value={editingPerson.name}
+                                onChange={(e) => setEditingPerson({ ...editingPerson, name: e.target.value })}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px', 
+                                    backgroundColor: '#34495e',
+                                    border: '1px solid #2c3e50',
+                                    borderRadius: '6px',
+                                    color: '#ecf0f1',
+                                    fontSize: '14px'
+                                }}
+                                placeholder="Введите имя человека"
+                                autoFocus
+                            />
+                        </div>
+                        
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between',
+                            gap: '10px'
+                        }}>
+                            <button 
+                                onClick={() => setEditingPerson(null)}
+                                style={{ 
+                                    padding: '12px 20px', 
+                                    backgroundColor: '#e74c3c',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: '500',
+                                    flex: 1,
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c0392b'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e74c3c'}
+                            >
+                                Отмена
+                            </button>
+                            <button 
+                                onClick={() => {
                                     if (editingPerson.name.trim()) {
                                         setPeople(prev => {
                                             const existing = prev.find(p => p.id === editingPerson.id);
@@ -344,11 +411,24 @@ function App() {
                                         });
                                         setEditingPerson(null);
                                     }
-                                }} style={{ marginTop: '10px', padding: '5px 10px' }}>Сохранить</button>
-                                <button onClick={() => setEditingPerson(null)} style={{ marginTop: '10px', marginLeft: '10px', padding: '5px 10px' }}>Отмена</button>
-                            </div>
-                        )}
-                        <button onClick={() => setIsPeopleModalOpen(false)} style={{ marginTop: '20px', padding: '5px 10px' }}>Закрыть</button>
+                                }}
+                                style={{ 
+                                    padding: '12px 20px', 
+                                    backgroundColor: '#27ae60',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: '500',
+                                    flex: 1,
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#229954'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#27ae60'}
+                            >
+                                {editingPerson.id && people.find(p => p.id === editingPerson.id) ? 'Сохранить' : 'Добавить'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
